@@ -13,7 +13,7 @@ from paho.mqtt.client import CallbackAPIVersion, Client, MQTTMessage
 
 from src.collector.event_processor import EventProcessor
 from src.config import AppConfig, SensorConfig
-from src.database import get_db
+from src.database import get_db, get_system_state, set_system_state
 
 logger = logging.getLogger("annem_guvende.collector")
 
@@ -99,6 +99,7 @@ class MQTTCollector:
 
         if event is not None:
             self._save_event(event)
+            self._update_fall_state(event)
 
         # Pil kontrolu
         if self._battery_callback is not None:
@@ -112,6 +113,22 @@ class MQTTCollector:
             logger.info("MQTT baglantisi kapandi (normal)")
         else:
             logger.warning("MQTT baglantisi koptu: reason_code=%s (otomatik reconnect aktif)", reason_code)
+
+    def _update_fall_state(self, event: dict) -> None:
+        """Banyo kullanim durumunu takip et (dusme tespiti icin).
+
+        Banyo event'i geldiginde zamani kaydeder.
+        Baska kanal event'i geldiginde (presence/kitchen/sleep/fridge)
+        banyo zamani sifirlanir — kisi banyodan cikmis kabul edilir.
+        """
+        if event["channel"] == "bathroom":
+            set_system_state(
+                self._db_path, "last_bathroom_time", event["timestamp"]
+            )
+        else:
+            last_bt = get_system_state(self._db_path, "last_bathroom_time", "")
+            if last_bt:
+                set_system_state(self._db_path, "last_bathroom_time", "")
 
     def _save_event(self, event: dict) -> None:
         """Normalize edilmis event'i sensor_events tablosuna kaydet."""

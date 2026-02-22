@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from src.config import AppConfig
 from src.dashboard.api import router as dashboard_router
 from src.database import get_db
 
@@ -17,6 +18,7 @@ def _create_test_app(db_path: str) -> FastAPI:
 
     # Mock app.state
     app.state.db_path = db_path
+    app.state.config = AppConfig()
     app.state.mqtt_collector = MagicMock(
         is_connected=MagicMock(return_value=False)
     )

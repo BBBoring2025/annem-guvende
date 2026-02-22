@@ -9,6 +9,7 @@ from src.detector.realtime_checks import (
     run_realtime_checks,
 )
 from src.detector.threshold_engine import get_alert_level
+from src.detector.trend_analyzer import analyze_all_trends, calculate_channel_trend
 
 __all__ = [
     "score_day",
@@ -21,4 +22,6 @@ __all__ = [
     "check_morning_vital_sign",
     "check_extended_silence",
     "RealtimeAlert",
+    "analyze_all_trends",
+    "calculate_channel_trend",
 ]

@@ -7,7 +7,7 @@
 ![SQLite](https://img.shields.io/badge/SQLite-WAL-003B57?logo=sqlite&logoColor=white)
 ![MQTT](https://img.shields.io/badge/MQTT-Zigbee2MQTT-660066)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-288%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-303%20passing-brightgreen)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ---
@@ -50,6 +50,8 @@ Zigbee Sensorler ──> Zigbee2MQTT ──> MQTT Broker (:1883)
 | :battery: | **Pil Takibi** | Sensor pili %10'un altina dustugunde Telegram uyarisi |
 | :clapper: | **Demo Modu** | 21 gunluk hizlandirilmis simulasyon (juri demo icin) |
 | :lock: | **Mahremiyet** | Kamera yok, mikrofon yok, tamamen lokal veri, Zigbee sensorler |
+| 🚿 | **Kamerasız Düşme Tespiti** | Banyo sensörü + zaman-farkı algoritması (Time-to-Return), 45dk |
+| 📉 | **Kırılganlık Endeksi** | 30 günlük lineer regresyon ile uzun vadeli sağlık trend analizi |
 
 ---
 
@@ -118,7 +120,7 @@ annem-guvende/
 │   ├── heartbeat/             # HeartbeatClient + Watchdog + SystemMonitor
 │   ├── dashboard/             # REST API + Charts + static/
 │   └── simulator/             # Demo modu (21 gun simulasyon)
-├── tests/                     # 288 test
+├── tests/                     # 303 test
 ├── docs/                      # ARCHITECTURE, API, CONFIG, INSTALL, vb.
 ├── scripts/                   # init_db.py, pilot_checklist.py
 ├── .github/workflows/         # CI (ruff + pytest)
@@ -150,7 +152,7 @@ Bot'a asagidaki komutlari gonderebilirsiniz:
 
 ```bash
 # Testleri calistir
-pytest -v --tb=short              # 288 test
+pytest -v --tb=short              # 303 test
 
 # Lint kontrolu
 ruff check src/ tests/ scripts/   # 0 hata

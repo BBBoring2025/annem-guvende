@@ -322,6 +322,15 @@ class AlertManager:
                 )
                 self._notifier.send_to_all(text)
                 logger.info("Uzun sessizlik alarmi gonderildi")
+        elif alert.alert_type == "fall_suspicion":
+            # Dusme suphesi — ACIL, rate limit atla
+            text = (
+                f"🚨 <b>DÜŞME ŞÜPHESİ</b>\n\n"
+                f"{alert.message}\n\n"
+                f"📞 Derhal kontrol edin!"
+            )
+            self._notifier.send_to_all(text)
+            logger.critical("DUSME SUPHESI alarmi gonderildi!")
 
     def handle_daily_summary(self, db_path: str) -> None:
         """22:00 gunluk ozet gondericisi.

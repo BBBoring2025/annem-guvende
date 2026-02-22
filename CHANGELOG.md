@@ -4,6 +4,27 @@ Tum onemli degisiklikler sprint bazinda belgelenmistir.
 
 ---
 
+## Sprint 14 — Kırılganlık Endeksi (Frailty Index)
+- **Trend Analyzer:** Saf Python OLS lineer regresyon ile kanal bazlı uzun vadeli trend tespiti.
+- **Sıfır-Gün Doldurma:** SQL GROUP BY'ın atladığı boş günler 0 ile padding — eğim doğruluğu garanti.
+- **Dashboard Endpoint:** GET /api/trends → kanal bazlı eğim değerleri.
+- **Haftalık Rapor:** Pazar 10:00 — banyo artış ve hareket azalış trendleri Telegram bildirimi.
+- **Config:** trend_analysis_days, trend_min_days, trend_bathroom_threshold, trend_presence_threshold.
+
+**Test sayısı:** 294 → 303 (+9)
+
+---
+
+## Sprint 13 — Kamerasız Düşme Tespiti (Time-to-Return)
+- **Fall Detection:** Banyo kapısı kapandıktan sonra 45dk sessizlik → Level 3 ACİL alarm.
+- **Akıllı State Temizleme:** Banyo dışı HERHANGİ BİR sensör tetiklenince state temizlenir (gece yatağa dönme dahil).
+- **Alarm Spam Önleme:** Alarm verildikten sonra state otomatik temizlenir.
+- **Feature Flag:** fall_detection_minutes=0 ile tamamen kapatılabilir.
+
+**Test sayısı:** 289 → 294 (+5)
+
+---
+
 ## Sprint 12 — Final Polish
 - **Realtime Rate-Limit DB Persist:** handle_realtime_alert() restart-safe.
 - **Callable Type-Hint:** callable → Callable (semantik duzeltme).

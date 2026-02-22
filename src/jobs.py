@@ -132,6 +132,46 @@ def nightly_maintenance_job(db_path: str, retention_days: int) -> None:
         logger.error("Gece bakimi hatasi: %s", exc)
 
 
+def weekly_trend_job(
+    db_path: str, config: AppConfig, alert_mgr: AlertManager
+) -> None:
+    """Pazar 10:00 — haftalik kirilganlik trend raporu."""
+    from src.detector.trend_analyzer import analyze_all_trends
+    from src.learner.metrics import get_channels_from_config
+
+    channels = get_channels_from_config(config)
+    trends = analyze_all_trends(
+        db_path, channels,
+        config.system.trend_analysis_days,
+        config.system.trend_min_days,
+    )
+
+    messages: list[str] = []
+    bath_trend = trends.get("bathroom")
+    if bath_trend is not None and bath_trend > config.system.trend_bathroom_threshold:
+        messages.append(
+            f"📈 Son {config.system.trend_analysis_days} günde banyo kullanım "
+            f"sıklığında artış trendi var (eğim: +{bath_trend:.2f}). "
+            f"İdrar yolu enfeksiyonu veya sindirim sorunu habercisi olabilir."
+        )
+
+    pres_trend = trends.get("presence")
+    if pres_trend is not None and pres_trend < config.system.trend_presence_threshold:
+        messages.append(
+            f"📉 Son {config.system.trend_analysis_days} günde genel ev içi "
+            f"hareketlilikte azalma trendi var (eğim: {pres_trend:.2f}). "
+            f"Yorgunluk veya motivasyon düşüklüğü habercisi olabilir."
+        )
+
+    if messages:
+        header = "🏥 <b>Haftalık Kırılganlık Raporu</b>\n\n"
+        full_msg = header + "\n\n".join(messages)
+        alert_mgr._notifier.send_to_all(full_msg)
+        logger.info("Haftalik kirilganlik raporu gonderildi: %d mesaj", len(messages))
+    else:
+        logger.info("Haftalik kirilganlik raporu: trend normal, bildirim yok")
+
+
 def telegram_command_job(db_path: str, config: AppConfig, notifier) -> None:
     """Telegram komutlarini isle (30sn polling)."""
     try:

@@ -46,6 +46,7 @@ class AlertsConfig(BaseModel):
     min_train_days: int = 7
     morning_check_hour: int = 11
     silence_threshold_hours: int = 3
+    fall_detection_minutes: int = 45  # 0 ise ozellik kapali
 
 
 class TelegramConfig(BaseModel):
@@ -72,6 +73,10 @@ class DashboardConfig(BaseModel):
 
 class SystemConfig(BaseModel):
     vacation_mode: bool = False
+    trend_analysis_days: int = 30
+    trend_min_days: int = 14
+    trend_bathroom_threshold: float = 0.3
+    trend_presence_threshold: float = -0.3
 
 
 class AppConfig(BaseModel):

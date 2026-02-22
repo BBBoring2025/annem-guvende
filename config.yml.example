@@ -41,6 +41,7 @@ alerts:
   min_train_days: 7                      # Minimum egitim gunu
   morning_check_hour: 11                 # Sabah sessizlik kontrol saati
   silence_threshold_hours: 3             # Uzun sessizlik esigi (saat)
+  fall_detection_minutes: 45             # Dusme tespiti (dk), 0=kapali
 
 # === Telegram Bildirimleri ===
 telegram:
@@ -68,3 +69,7 @@ dashboard:
 # === Sistem ===
 system:
   vacation_mode: false                   # Tatil modu (true = alarm devre disi)
+  trend_analysis_days: 30                # Trend analizi periyodu (gun)
+  trend_min_days: 14                     # Minimum veri gunu (altinda analiz yapma)
+  trend_bathroom_threshold: 0.3          # Banyo artis alarm esigi
+  trend_presence_threshold: -0.3         # Hareket azalis alarm esigi

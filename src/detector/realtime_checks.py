@@ -3,6 +3,7 @@
 Her 30 dakikada APScheduler ile calisir:
 1. Sabah vital sign: 11:00'a kadar hic event yoksa -> alert_level=2
 2. Uzun sessizlik: Awake window icinde 3+ saat event yoksa -> alert_level=1
+3. Dusme suphesi: Banyo sonrasi 45+ dk baska sinyal yoksa -> alert_level=3
 """
 
 import logging
@@ -10,7 +11,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from src.config import AppConfig
-from src.database import get_db
+from src.database import get_db, get_system_state, set_system_state
 
 logger = logging.getLogger("annem_guvende.detector")
 
@@ -23,8 +24,8 @@ DEFAULT_SILENCE_THRESHOLD_HOURS = 3
 class RealtimeAlert:
     """Gercek zamanli kontrol sonucu."""
 
-    alert_type: str  # "morning_silence" | "extended_silence"
-    alert_level: int  # 1 veya 2
+    alert_type: str  # "morning_silence" | "extended_silence" | "fall_suspicion"
+    alert_level: int  # 1, 2 veya 3
     message: str
     last_event_time: str | None
 
@@ -156,6 +157,55 @@ def check_extended_silence(
     return None
 
 
+def check_fall_suspicion(
+    db_path: str,
+    config: AppConfig,
+    now: datetime | None = None,
+) -> RealtimeAlert | None:
+    """Banyo sonrasi uzun sure hareket yoksa dusme suphesi.
+
+    Banyo kullanimi tespit edildikten sonra baska hicbir sensorden
+    sinyal gelmezse (fall_detection_minutes dk) acil alarm uret.
+    Alarm verildikten sonra state temizlenir (tekrar alarm onlenir).
+
+    Args:
+        db_path: Veritabani yolu
+        config: Uygulama konfigurasyonu
+        now: Simdiki zaman (test icin override)
+
+    Returns:
+        RealtimeAlert(level=3) veya alarm yoksa None
+    """
+    timeout = config.alerts.fall_detection_minutes
+    if timeout <= 0:
+        return None
+
+    last_bt_str = get_system_state(db_path, "last_bathroom_time", "")
+    if not last_bt_str:
+        return None
+
+    now = now or datetime.now()
+    try:
+        last_bt = datetime.fromisoformat(last_bt_str)
+    except ValueError:
+        return None
+
+    elapsed = (now - last_bt).total_seconds() / 60
+    if elapsed >= timeout:
+        # Alarm verildikten sonra state'i temizle (tekrar tekrar alarm vermesin)
+        set_system_state(db_path, "last_bathroom_time", "")
+        return RealtimeAlert(
+            alert_type="fall_suspicion",
+            alert_level=3,
+            message=(
+                f"⚠️ DÜŞME ŞÜPHESİ: Banyo kullanımından bu yana "
+                f"{int(elapsed)} dakika geçti, hiçbir sensörden sinyal yok!"
+            ),
+            last_event_time=last_bt_str,
+        )
+    return None
+
+
 def run_realtime_checks(
     db_path: str,
     config: AppConfig,
@@ -177,5 +227,9 @@ def run_realtime_checks(
     silence = check_extended_silence(db_path, config, now)
     if silence:
         alerts.append(silence)
+
+    fall = check_fall_suspicion(db_path, config, now)
+    if fall:
+        alerts.append(fall)
 
     return alerts

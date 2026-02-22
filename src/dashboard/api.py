@@ -91,3 +91,20 @@ async def api_health(request: Request, response: Response):
     except Exception as exc:
         response.status_code = 503
         return {"status": "error", "reason": str(exc)}
+
+
+@router.get("/trends")
+async def api_trends(request: Request):
+    """Son N gunluk kanal bazli trend egimleri."""
+    db_path = request.app.state.db_path
+    config = request.app.state.config
+
+    from src.detector.trend_analyzer import analyze_all_trends
+    from src.learner.metrics import get_channels_from_config
+
+    channels = get_channels_from_config(config)
+    days = config.system.trend_analysis_days
+    min_days = config.system.trend_min_days
+
+    trends = analyze_all_trends(db_path, channels, days, min_days)
+    return {"trends": trends, "period_days": days}

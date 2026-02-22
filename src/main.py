@@ -42,6 +42,7 @@ from src.jobs import (
     slot_aggregation_job,
     telegram_command_job,
     watchdog_job,
+    weekly_trend_job,
 )
 
 # Loglama ayarlari
@@ -217,6 +218,14 @@ async def lifespan(app: FastAPI):
         lambda: daily_summary_job(db_path, config, alert_mgr),
         "cron", hour=22, minute=0,
         id="daily_summary", name="Gunluk ozet (22:00)", replace_existing=True,
+    )
+
+    # Haftalik kirilganlik trend raporu (Pazar 10:00)
+    scheduler.add_job(
+        lambda: weekly_trend_job(db_path, config, alert_mgr),
+        "cron", day_of_week="sun", hour=10, minute=0,
+        id="weekly_trend", name="Haftalik kirilganlik trend raporu",
+        replace_existing=True,
     )
 
     # Heartbeat + Watchdog
