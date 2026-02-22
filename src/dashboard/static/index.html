@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Annem Güvende - Dashboard</title>
+    <script src="/static/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --bg-card: #0f3460;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0b0;
+            --accent: #00d4ff;
+            --success: #00e676;
+            --warning: #ffab00;
+            --danger: #ff5252;
+            --info: #448aff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        header {
+            text-align: center;
+            padding: 16px 0 24px;
+        }
+        header h1 {
+            font-size: 1.8rem;
+            color: var(--accent);
+            margin-bottom: 4px;
+        }
+        header .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        header .last-update {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            margin-top: 4px;
+        }
+
+        .status-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        .card .label {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .card .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        .card .detail {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            margin-top: 4px;
+        }
+
+        .alert-normal { color: var(--success); }
+        .alert-dikkat { color: var(--warning); }
+        .alert-uyari { color: var(--danger); }
+        .alert-acil { color: var(--danger); font-weight: 900; }
+
+        .section {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .section h2 {
+            font-size: 1.1rem;
+            color: var(--accent);
+            margin-bottom: 16px;
+        }
+
+        /* Heatmap - CSS Grid */
+        .heatmap-container {
+            overflow-x: auto;
+        }
+        .heatmap-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        .heatmap-label {
+            width: 80px;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-align: right;
+            padding-right: 8px;
+            flex-shrink: 0;
+        }
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(96, 1fr);
+            gap: 1px;
+            flex: 1;
+            min-width: 480px;
+        }
+        .heatmap-cell {
+            aspect-ratio: 1;
+            border-radius: 2px;
+            min-width: 3px;
+        }
+        .heatmap-hours {
+            display: flex;
+            margin-left: 80px;
+            min-width: 480px;
+        }
+        .heatmap-hour {
+            flex: 1;
+            text-align: center;
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 280px;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        .mqtt-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .mqtt-ok { background: var(--success); color: #000; }
+        .mqtt-fail { background: var(--danger); color: #fff; }
+
+        .loading { text-align: center; color: var(--text-secondary); padding: 40px; }
+
+        @media (max-width: 768px) {
+            .status-cards { grid-template-columns: 1fr 1fr; }
+            .charts-grid { grid-template-columns: 1fr; }
+            .chart-container { height: 220px; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🏠 Annem Güvende</h1>
+        <p class="subtitle">Yaşlı Bireylerde Rutin İzleme Sistemi</p>
+        <p class="last-update" id="lastUpdate">Yükleniyor...</p>
+    </header>
+
+    <!-- Durum Kartları -->
+    <div class="status-cards">
+        <div class="card">
+            <div class="label">Alarm Durumu</div>
+            <div class="value" id="alertLevel">-</div>
+            <div class="detail" id="alertDetail">composite_z: -</div>
+        </div>
+        <div class="card">
+            <div class="label">Eğitim Günü</div>
+            <div class="value" id="trainDays">-</div>
+            <div class="detail" id="trainDetail">-</div>
+        </div>
+        <div class="card">
+            <div class="label">Model Güveni</div>
+            <div class="value" id="ciWidth">-</div>
+            <div class="detail">CI genişliği (düşük = iyi)</div>
+        </div>
+        <div class="card">
+            <div class="label">Son Olay</div>
+            <div class="value" id="lastEvent">-</div>
+            <div class="detail" id="lastEventDetail">-</div>
+        </div>
+    </div>
+
+    <!-- Bugünün Slot Haritası -->
+    <div class="section">
+        <h2>📊 Model Olasılık Haritası
+            <span class="mqtt-badge" id="mqttBadge">-</span>
+        </h2>
+        <div class="heatmap-container" id="heatmapContainer">
+            <div class="loading">Yükleniyor...</div>
+        </div>
+    </div>
+
+    <!-- Grafikler -->
+    <div class="charts-grid">
+        <div class="section">
+            <h2>📈 NLL Trend (Anomali Skoru)</h2>
+            <div class="chart-container">
+                <canvas id="nllChart"></canvas>
+            </div>
+        </div>
+        <div class="section">
+            <h2>📉 Öğrenme Eğrisi</h2>
+            <div class="chart-container">
+                <canvas id="learningChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📊 Günlük Olay Sayıları</h2>
+        <div class="chart-container">
+            <canvas id="eventsChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+    // --- Veri cekme ---
+    const API = '/api';
+    let nllChart, learningChart, eventsChart;
+
+    async function fetchJSON(path) {
+        try {
+            const resp = await fetch(API + path);
+            if (!resp.ok) return null;
+            return await resp.json();
+        } catch (e) {
+            console.error('Fetch hatasi:', path, e);
+            return null;
+        }
+    }
+
+    // --- Durum Kartlari ---
+    async function updateStatus() {
+        const data = await fetchJSON('/status');
+        if (!data) return;
+
+        // Alarm
+        const alertEl = document.getElementById('alertLevel');
+        const alertClasses = {0: 'alert-normal', 1: 'alert-dikkat', 2: 'alert-uyari', 3: 'alert-acil'};
+        alertEl.textContent = data.alert.label;
+        alertEl.className = 'value ' + (alertClasses[data.alert.level] || '');
+        document.getElementById('alertDetail').textContent =
+            'composite_z: ' + (data.alert.composite_z || 0).toFixed(2);
+
+        // Egitim
+        document.getElementById('trainDays').textContent = data.learning.train_days;
+        const phase = data.learning.is_learning ? 'Öğrenme aşamasında' : 'Model hazır';
+        document.getElementById('trainDetail').textContent =
+            phase + ' (' + data.learning.total_days + ' gün veri)';
+
+        // CI
+        document.getElementById('ciWidth').textContent =
+            (data.learning.avg_ci_width * 100).toFixed(1) + '%';
+
+        // Son event
+        const lastEl = document.getElementById('lastEvent');
+        const lastDetail = document.getElementById('lastEventDetail');
+        if (data.last_event) {
+            const age = data.last_event.age_minutes;
+            if (age !== null && age < 60) {
+                lastEl.textContent = Math.round(age) + ' dk';
+            } else if (age !== null) {
+                lastEl.textContent = (age / 60).toFixed(1) + ' saat';
+            } else {
+                lastEl.textContent = '-';
+            }
+            lastDetail.textContent = data.last_event.channel + ' (' + data.last_event.sensor_id + ')';
+        } else {
+            lastEl.textContent = 'Yok';
+            lastDetail.textContent = 'Henüz olay kaydedilmedi';
+        }
+
+        // MQTT
+        const mqttBadge = document.getElementById('mqttBadge');
+        if (data.mqtt_connected) {
+            mqttBadge.textContent = 'MQTT Bağlı';
+            mqttBadge.className = 'mqtt-badge mqtt-ok';
+        } else {
+            mqttBadge.textContent = 'MQTT Kopuk';
+            mqttBadge.className = 'mqtt-badge mqtt-fail';
+        }
+
+        // Son guncelleme
+        document.getElementById('lastUpdate').textContent =
+            'Son güncelleme: ' + new Date().toLocaleString('tr-TR');
+    }
+
+    // --- Heatmap ---
+    function probToColor(prob) {
+        // 0 = koyu mavi, 1 = parlak turkuaz
+        const r = Math.round(0 + prob * 0);
+        const g = Math.round(20 + prob * 192);
+        const b = Math.round(60 + prob * 195);
+        return `rgb(${r}, ${g}, ${b})`;
+    }
+
+    async function updateHeatmap() {
+        const data = await fetchJSON('/heatmap');
+        if (!data) return;
+
+        const container = document.getElementById('heatmapContainer');
+        container.innerHTML = '';
+
+        const channels = ['presence', 'fridge', 'bathroom', 'door'];
+        const labels = {
+            presence: 'Hareket',
+            fridge: 'Buzdolabı',
+            bathroom: 'Banyo',
+            door: 'Kapı'
+        };
+
+        channels.forEach(ch => {
+            const row = document.createElement('div');
+            row.className = 'heatmap-row';
+
+            const label = document.createElement('div');
+            label.className = 'heatmap-label';
+            label.textContent = labels[ch] || ch;
+            row.appendChild(label);
+
+            const grid = document.createElement('div');
+            grid.className = 'heatmap-grid';
+
+            data.model[ch].forEach(slot => {
+                const cell = document.createElement('div');
+                cell.className = 'heatmap-cell';
+                cell.style.backgroundColor = probToColor(slot.probability);
+                cell.title = `Slot ${slot.slot} (${Math.floor(slot.slot/4).toString().padStart(2,'0')}:${((slot.slot%4)*15).toString().padStart(2,'0')}) - Olasılık: ${(slot.probability*100).toFixed(1)}%`;
+                grid.appendChild(cell);
+            });
+
+            row.appendChild(grid);
+            container.appendChild(row);
+        });
+
+        // Saat etiketleri
+        const hoursDiv = document.createElement('div');
+        hoursDiv.className = 'heatmap-hours';
+        for (let h = 0; h < 24; h++) {
+            const hLabel = document.createElement('div');
+            hLabel.className = 'heatmap-hour';
+            hLabel.textContent = h % 3 === 0 ? h.toString().padStart(2, '0') : '';
+            hLabel.style.flex = '4';
+            hoursDiv.appendChild(hLabel);
+        }
+        container.appendChild(hoursDiv);
+    }
+
+    // --- NLL Trend ---
+    async function updateNLLChart() {
+        const data = await fetchJSON('/history?days=30');
+        if (!data || !data.days.length) return;
+
+        const days = data.days.reverse(); // ASC sira
+        const labels = days.map(d => d.date.slice(5)); // MM-DD
+        const nllValues = days.map(d => d.nll_total);
+        const zValues = days.map(d => d.composite_z);
+
+        const ctx = document.getElementById('nllChart').getContext('2d');
+        if (nllChart) nllChart.destroy();
+
+        nllChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'NLL Toplam',
+                        data: nllValues,
+                        borderColor: '#00d4ff',
+                        backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 2,
+                    },
+                    {
+                        label: 'Composite Z',
+                        data: zValues,
+                        borderColor: '#ffab00',
+                        borderDash: [5, 5],
+                        tension: 0.3,
+                        pointRadius: 2,
+                        yAxisID: 'y1',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { intersect: false, mode: 'index' },
+                plugins: {
+                    legend: { labels: { color: '#e0e0e0' } },
+                    annotation: {}
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#a0a0b0', maxRotation: 45 },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    },
+                    y: {
+                        position: 'left',
+                        title: { display: true, text: 'NLL', color: '#a0a0b0' },
+                        ticks: { color: '#a0a0b0' },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    },
+                    y1: {
+                        position: 'right',
+                        title: { display: true, text: 'Z-skor', color: '#a0a0b0' },
+                        ticks: { color: '#a0a0b0' },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    // --- Ogrenme Egrisi ---
+    async function updateLearningChart() {
+        const data = await fetchJSON('/learning-curve');
+        if (!data || !data.dates.length) return;
+
+        const labels = data.dates.map(d => d.slice(5));
+
+        const ctx = document.getElementById('learningChart').getContext('2d');
+        if (learningChart) learningChart.destroy();
+
+        learningChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'CI Genişliği',
+                        data: data.ci_widths,
+                        borderColor: '#00d4ff',
+                        backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 2,
+                    },
+                    {
+                        label: 'Accuracy',
+                        data: data.accuracies,
+                        borderColor: '#00e676',
+                        tension: 0.3,
+                        pointRadius: 2,
+                        yAxisID: 'y1',
+                    },
+                    {
+                        label: 'Balanced Acc.',
+                        data: data.balanced_accuracies,
+                        borderColor: '#448aff',
+                        borderDash: [4, 4],
+                        tension: 0.3,
+                        pointRadius: 2,
+                        yAxisID: 'y1',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { intersect: false, mode: 'index' },
+                plugins: {
+                    legend: { labels: { color: '#e0e0e0' } }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#a0a0b0', maxRotation: 45 },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    },
+                    y: {
+                        position: 'left',
+                        title: { display: true, text: 'CI Genişliği', color: '#a0a0b0' },
+                        ticks: { color: '#a0a0b0' },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    },
+                    y1: {
+                        position: 'right',
+                        title: { display: true, text: 'Accuracy', color: '#a0a0b0' },
+                        ticks: { color: '#a0a0b0' },
+                        grid: { display: false },
+                        min: 0, max: 1,
+                    }
+                }
+            }
+        });
+    }
+
+    // --- Gunluk Olay Sayilari ---
+    async function updateEventsChart() {
+        const data = await fetchJSON('/history?days=14');
+        if (!data || !data.days.length) return;
+
+        const days = data.days.reverse();
+        const labels = days.map(d => d.date.slice(5));
+        const counts = days.map(d => d.observed_count || 0);
+
+        // Renk: alarm seviyesine gore
+        const colors = days.map(d => {
+            const level = d.alert_level || 0;
+            if (level === 0) return '#00e676';
+            if (level === 1) return '#ffab00';
+            return '#ff5252';
+        });
+
+        const ctx = document.getElementById('eventsChart').getContext('2d');
+        if (eventsChart) eventsChart.destroy();
+
+        eventsChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Toplam Olay',
+                    data: counts,
+                    backgroundColor: colors,
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#e0e0e0' } }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#a0a0b0' },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    },
+                    y: {
+                        title: { display: true, text: 'Olay Sayısı', color: '#a0a0b0' },
+                        ticks: { color: '#a0a0b0' },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    }
+                }
+            }
+        });
+    }
+
+    // --- Baslat ---
+    async function refreshAll() {
+        await Promise.all([
+            updateStatus(),
+            updateHeatmap(),
+            updateNLLChart(),
+            updateLearningChart(),
+            updateEventsChart(),
+        ]);
+    }
+
+    // Ilk yukleme
+    refreshAll();
+
+    // 5dk otomatik yenileme
+    setInterval(refreshAll, 5 * 60 * 1000);
+    </script>
+</body>
+</html>

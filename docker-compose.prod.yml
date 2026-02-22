@@ -1,0 +1,26 @@
+# docker-compose.prod.yml — Uretim ortami guvenlik sertlestirmesi.
+# Kullanim: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Host hazirlik:
+#   sudo chown -R 10001:10001 ./data ./config
+
+services:
+  annem-guvende:
+    read_only: true
+    tmpfs:
+      - /tmp:size=10M
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      - ANNEM_ENV=production
+      - TZ=Europe/Istanbul
+      - ANNEM_DASHBOARD_PASSWORD=guclu_sifre_buraya_yazin
+      - ANNEM_TELEGRAM_BOT_TOKEN=bot_token_buraya_yazin
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

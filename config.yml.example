@@ -1,0 +1,70 @@
+# === MQTT Ayarlari ===
+mqtt:
+  broker: "localhost"                    # MQTT broker adresi
+  port: 1883                             # MQTT port
+  topic_prefix: "zigbee2mqtt"            # Zigbee2MQTT topic on eki
+
+# === Sensor Tanimlari ===
+# Her sensor icin: id (Zigbee2MQTT'deki isim), channel, type, trigger_value
+sensors:
+  - id: "mutfak_motion"
+    channel: "presence"
+    type: "motion"
+    trigger_value: "on"
+  - id: "buzdolabi_kapi"
+    channel: "fridge"
+    type: "contact"
+    trigger_value: "open"
+  - id: "banyo_kapi"
+    channel: "bathroom"
+    type: "contact"
+    trigger_value: "open"
+  - id: "dis_kapi"
+    channel: "door"
+    type: "contact"
+    trigger_value: "open"
+
+# === Model Parametreleri ===
+model:
+  slot_minutes: 15                       # Zaman dilimi suresi (dakika)
+  awake_start_hour: 6                    # Uyanik periyod baslangici
+  awake_end_hour: 23                     # Uyanik periyod bitisi
+  learning_days: 14                      # Ogrenme donemi (gun)
+  prior_alpha: 1.0                       # Beta dagilimi alpha on degeri
+  prior_beta: 1.0                        # Beta dagilimi beta on degeri
+
+# === Alarm Esikleri ===
+alerts:
+  z_threshold_gentle: 2.0               # Seviye 1 (dikkat) esigi
+  z_threshold_serious: 3.0              # Seviye 2 (ciddi) esigi
+  z_threshold_emergency: 4.0            # Seviye 3 (acil) esigi
+  min_train_days: 7                      # Minimum egitim gunu
+  morning_check_hour: 11                 # Sabah sessizlik kontrol saati
+  silence_threshold_hours: 3             # Uzun sessizlik esigi (saat)
+
+# === Telegram Bildirimleri ===
+telegram:
+  bot_token: "BOT_TOKEN_BURAYA"          # BotFather'dan alinan token
+  chat_ids:                              # Bildirim alacak kullanicilar
+    - "CHAT_ID_BURAYA"
+
+# === Heartbeat (Dis Izleme) ===
+heartbeat:
+  enabled: false                         # Dis VPS heartbeat aktif mi
+  url: ""                                # Heartbeat endpoint URL
+  device_id: "annem-pi"                  # Cihaz kimlik bilgisi
+  interval_seconds: 300                  # Gonderim araligi (5 dk)
+
+# === Veritabani ===
+database:
+  path: "./data/annem_guvende.db"        # SQLite dosya yolu
+  retention_days: 90                     # Veri saklama suresi (gun)
+
+# === Dashboard ===
+dashboard:
+  username: "admin"                      # HTTP Basic Auth kullanici adi
+  password: "change_me_immediately"      # Guclu bir sifre belirleyin!
+
+# === Sistem ===
+system:
+  vacation_mode: false                   # Tatil modu (true = alarm devre disi)

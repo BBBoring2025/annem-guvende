@@ -14,6 +14,7 @@ data/*.db-journal
 
 # Config (contains secrets)
 config.yml
+.env
 
 # IDE
 .vscode/
@@ -30,3 +31,16 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# Claude Code
+.claude/
+
+# SQLite WAL
+*.db-wal
+*.db-shm
+
+# Ruff cache
+.ruff_cache/
+
+# Pytest cache
+.pytest_cache/
