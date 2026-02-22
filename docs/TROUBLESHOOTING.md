@@ -208,8 +208,8 @@ docker compose restart annem-guvende
    ```yaml
    heartbeat:
      enabled: true
-     cron_hour: 21
-     cron_minute: 0
+     url: "https://your-vps.com/heartbeat"
+     interval_seconds: 300
    ```
 
 2. Sistem saatini kontrol edin:
@@ -278,6 +278,23 @@ Checklist'i tekrar calistirin:
 ```bash
 python scripts/pilot_checklist.py --config config.yml
 ```
+
+---
+
+## Container Izin Sorunlari
+
+### Container "Permission denied: /app/data" hatasi
+
+Container non-root kullanici (UID 10001) ile calisir. Host dizinlerinin
+bu kullaniciya ait olmasi gerekir:
+
+```bash
+sudo chown -R 10001:10001 ./data ./config
+```
+
+Ayrica `docker-compose.prod.yml` kullaniyorsaniz, kok dosya sistemi
+salt-okunur (`read_only: true`) oldugundan `/app/data` ve `/app/config`
+volume olarak mount edilmelidir.
 
 ---
 

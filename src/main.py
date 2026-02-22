@@ -138,6 +138,12 @@ async def lifespan(app: FastAPI):
             "config.yml veya ANNEM_DASHBOARD_PASSWORD env variable ile degistirin."
         )
 
+    if os.environ.get("ANNEM_ENV") == "production":
+        if not (config.dashboard.username and config.dashboard.password != "change_me_immediately"):
+            raise ValueError(
+                "GUVENLIK: Production modda dashboard username ve password ayarlanmali!"
+            )
+
     # Tatil modu: DB'de state yoksa config degerini seed et
     if not get_system_state(db_path, "vacation_mode"):
         initial_vacation = str(config.system.vacation_mode).lower()

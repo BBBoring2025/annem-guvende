@@ -18,6 +18,7 @@ services:
       - TZ=Europe/Istanbul
       - ANNEM_DASHBOARD_PASSWORD=guclu_sifre_buraya_yazin
       - ANNEM_TELEGRAM_BOT_TOKEN=bot_token_buraya_yazin
+      - PYTHONDONTWRITEBYTECODE=1
     restart: unless-stopped
     logging:
       driver: json-file

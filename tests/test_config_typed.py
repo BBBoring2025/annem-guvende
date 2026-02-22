@@ -86,6 +86,28 @@ def test_env_override_dashboard_password(monkeypatch):
     assert config.dashboard.password == "super_secret_42"
 
 
+def test_production_missing_username_raises(tmp_path, monkeypatch):
+    """ANNEM_ENV=production + username='' → ValueError."""
+    from unittest.mock import MagicMock, patch
+
+    from fastapi.testclient import TestClient
+
+    monkeypatch.setenv("ANNEM_ENV", "production")
+    config_data = AppConfig(
+        dashboard={"username": "", "password": "guclu_sifre_123"},
+        database={"path": str(tmp_path / "test.db")},
+    )
+    with patch("src.main.load_config", return_value=config_data), \
+         patch("src.main.MQTTCollector") as mock_mqtt:
+        mock_collector = MagicMock()
+        mock_mqtt.return_value = mock_collector
+        from src.main import app
+
+        with pytest.raises((ValueError, SystemExit)):
+            with TestClient(app):
+                pass
+
+
 def test_production_default_password_raises(tmp_path, monkeypatch):
     """ANNEM_ENV=production + varsayilan sifre → ValueError."""
     from unittest.mock import MagicMock, patch
