@@ -64,7 +64,7 @@ Zigbee Sensorler ──> Zigbee2MQTT ──> MQTT Broker (:1883)
 ### Kurulum
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/annem-guvende.git
+git clone https://github.com/BBBoring2025/annem-guvende.git
 cd annem-guvende
 
 # Config dosyasini hazirlayin
