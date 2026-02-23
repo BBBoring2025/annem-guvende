@@ -13,6 +13,7 @@ Tum onemli degisiklikler sprint bazinda belgelenmistir.
 - **Private Access Temizliği:** `alert_mgr._notifier.send_to_all()` → `alert_mgr.send_notification()` public API.
 - **Docs Drift Fix:** README, CONFIG, ARCHITECTURE, API, INSTALL, TROUBLESHOOTING belgeleri Sprint 13-16 değişiklikleriyle güncellendi.
 - **Prod Compose Fix (16.1):** Hardcoded şifreler `${VAR}` interpolasyona çevrildi, `.env.example` eklendi, `ANNEM_DB_PATH` env desteği eklendi.
+- **Son Rötuş (16.2):** `ci_check.sh` executable yapıldı, INSTALL.md config yolu standartlaştırıldı (`config/config.yml`), CONFIG.md env tablosu güncellendi.
 
 **Test sayısı:** 310 → 313 (+3)
 

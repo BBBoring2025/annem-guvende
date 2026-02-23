@@ -190,3 +190,4 @@ Config dosyasi yerine env variable ile override edilebilen ayarlar:
 | `ANNEM_TELEGRAM_BOT_TOKEN` | Telegram bot token | `telegram.bot_token` |
 | `ANNEM_CONFIG_PATH` | Config dosya yolu | Varsayilan `config.yml` |
 | `ANNEM_ENV` | Ortam (`production` = siki guvenlik) | — |
+| `ANNEM_DB_PATH` | Veritabanı dosya yolu (`database.path`'i ezer) | — |

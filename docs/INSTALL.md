@@ -21,8 +21,9 @@ cd annem-guvende
 ### 2. Konfigurasyonu hazirla
 
 ```bash
-cp config.yml.example config.yml
-nano config.yml
+mkdir -p config data
+cp config.yml.example config/config.yml
+nano config/config.yml
 ```
 
 Duzenlenmesi gereken alanlar:
@@ -34,10 +35,7 @@ Duzenlenmesi gereken alanlar:
 ### 3. Baslat
 
 ```bash
-mkdir -p config data
-cp config.yml.example config/config.yml
-# config/config.yml icindeki sensor, Telegram ve diger ayarlari duzenleyin
-
+sudo chown -R 10001:10001 data config
 docker compose up -d
 ```
 
