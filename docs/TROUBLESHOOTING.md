@@ -271,12 +271,12 @@ Her kontrol icin ayri cozum:
 | sensor_events | Hic event yok | Sensoru tetikleyin, 5 dk bekleyin |
 | telegram | Bot token hatali | BotFather'dan kontrol edin |
 | heartbeat | Heartbeat kapalı | `config.yml`'de `enabled: true` |
-| db_writable | Yetki sorunu | `chmod 755 data/` |
+| db_writable | Yetki sorunu | `sudo chown -R 10001:10001 ./data ./config` |
 | dashboard | Servis kapali | `docker compose up -d` |
 
 Checklist'i tekrar calistirin:
 ```bash
-python scripts/pilot_checklist.py --config config.yml
+python scripts/pilot_checklist.py --config config/config.yml
 ```
 
 ---
@@ -341,7 +341,7 @@ Bu durum iki farkli sebepten kaynaklanabilir:
 
 1. **Internet kesintisi**: Pi'nin interneti kesilmis olabilir.
    - Modem/router'i kontrol edin
-   - Pi'ye SSH ile baglanmayi deneyin: `ssh pi@<IP>`
+   - Pi'ye SSH ile baglanmayi deneyin: `ssh pi@RASPBERRY_PI_IP`
    - Pi'den ping atin: `ping 8.8.8.8`
 
 2. **Pi'nin kendisi kapanmis**: Guc kaynagi sorunu olabilir.
@@ -450,5 +450,5 @@ bastiginizda yanit gelmiyorsa:
 Sorun devam ederse:
 
 1. `docker compose logs > logs.txt` ile tam loglari kaydedin
-2. `python scripts/pilot_checklist.py --config config.yml` ciktisini alin
+2. `python scripts/pilot_checklist.py --config config/config.yml` ciktisini alin
 3. GitHub Issues'a raporlayin (hassas bilgileri cikararak)

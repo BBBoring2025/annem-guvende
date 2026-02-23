@@ -14,7 +14,7 @@
 
 ```bash
 cd /home/pi
-git clone <repo-url> annem-guvende
+git clone https://github.com/BBBoring2025/annem-guvende.git
 cd annem-guvende
 ```
 
@@ -93,10 +93,10 @@ Docker Compose bu dosyayi otomatik okur. Desteklenen degiskenler:
 
 ```bash
 # Pilot checklist calistir
-python scripts/pilot_checklist.py
+python scripts/pilot_checklist.py --config config/config.yml
 
 # Dashboard'u kontrol et
-# Tarayicida: http://<pi-ip>:8099
+# Tarayicida: http://RASPBERRY_PI_IP:8099 (veya localhost:8099)
 ```
 
 ## Ilk 14 Gun (Ogrenme Donemi)

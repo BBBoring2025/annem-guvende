@@ -14,6 +14,7 @@ Tum onemli degisiklikler sprint bazinda belgelenmistir.
 - **Docs Drift Fix:** README, CONFIG, ARCHITECTURE, API, INSTALL, TROUBLESHOOTING belgeleri Sprint 13-16 değişiklikleriyle güncellendi.
 - **Prod Compose Fix (16.1):** Hardcoded şifreler `${VAR}` interpolasyona çevrildi, `.env.example` eklendi, `ANNEM_DB_PATH` env desteği eklendi.
 - **Son Rötuş (16.2):** `ci_check.sh` executable yapıldı, INSTALL.md config yolu standartlaştırıldı (`config/config.yml`), CONFIG.md env tablosu güncellendi.
+- **Docs Micro-Fix (16.3):** INSTALL clone URL, API base URL, TROUBLESHOOTING db_writable ve config path düzeltildi.
 
 **Test sayısı:** 310 → 313 (+3)
 

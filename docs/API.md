@@ -4,10 +4,12 @@
 
 | Ozellik | Deger |
 |---------|-------|
-| Base URL | `http://<IP>:8099` |
+| Base URL | `http://RASPBERRY_PI_IP:8099` |
 | Kimlik Dogrulama | HTTP Basic Auth |
 | Yanit Formati | JSON |
 | Karakter Seti | UTF-8 |
+
+> Aynı cihazdan test ediyorsanız: `http://localhost:8099`
 
 ### Kimlik Dogrulama
 
