@@ -91,6 +91,61 @@ class TelegramNotifier:
             results[chat_id] = self.send_message(chat_id, text, parse_mode)
         return results
 
+    def send_message_with_ack(self, chat_id: str, text: str, alert_id: int) -> bool:
+        """Mesaji 'Gordum' butonu ile gonder.
+
+        Args:
+            chat_id: Hedef chat ID
+            text: Mesaj metni
+            alert_id: pending_alerts tablosundaki kayit ID
+
+        Returns:
+            True = basarili
+        """
+        if not self._enabled:
+            return False
+
+        payload = {
+            "chat_id": chat_id,
+            "text": text,
+            "parse_mode": "HTML",
+            "reply_markup": {
+                "inline_keyboard": [[
+                    {"text": "✅ Gördüm, İlgileniyorum", "callback_data": f"ack_{alert_id}"}
+                ]]
+            },
+        }
+
+        try:
+            response = self._client.post(
+                f"{self._base_url}/sendMessage",
+                json=payload,
+            )
+            if response.status_code == 200:
+                logger.info(
+                    "Butonlu mesaj gonderildi: chat_id=%s alert_id=%d",
+                    chat_id, alert_id,
+                )
+                return True
+            logger.error(
+                "Telegram API hatasi (ack mesaj): status=%d body=%s",
+                response.status_code, response.text[:200],
+            )
+            return False
+        except httpx.HTTPError as exc:
+            logger.error("Telegram baglanti hatasi (ack mesaj): %s", exc)
+            return False
+
+    def send_to_all_with_ack(self, text: str, alert_id: int) -> None:
+        """Tum chat_id'lere butonlu mesaj gonder.
+
+        Args:
+            text: Mesaj metni
+            alert_id: pending_alerts tablosundaki kayit ID
+        """
+        for chat_id in self._chat_ids:
+            self.send_message_with_ack(chat_id, text, alert_id)
+
     def send_photo(
         self,
         chat_id: str,
@@ -128,6 +183,34 @@ class TelegramNotifier:
             logger.error("Telegram photo baglanti hatasi: %s", exc)
             return False
 
+    def _send_request(self, method: str, payload: dict) -> bool:
+        """Genel Telegram Bot API istegi gonder.
+
+        Args:
+            method: API metodu (ornegin answerCallbackQuery)
+            payload: JSON payload
+
+        Returns:
+            True = basarili
+        """
+        if not self._enabled:
+            return False
+
+        try:
+            response = self._client.post(
+                f"{self._base_url}/{method}",
+                json=payload,
+            )
+            if response.status_code == 200:
+                return True
+            logger.error(
+                "Telegram %s hatasi: status=%d", method, response.status_code
+            )
+            return False
+        except httpx.HTTPError as exc:
+            logger.error("Telegram %s baglanti hatasi: %s", method, exc)
+            return False
+
     def close(self) -> None:
         """HTTP client'i kapat (shutdown sirasinda cagrilir)."""
         self._client.close()
@@ -147,7 +230,7 @@ class TelegramNotifier:
             return []
 
         try:
-            params: dict = {"timeout": 5, "allowed_updates": ["message"]}
+            params: dict = {"timeout": 5, "allowed_updates": ["message", "callback_query"]}
             if offset > 0:
                 params["offset"] = offset
             response = self._client.get(
@@ -188,6 +271,13 @@ class TelegramNotifier:
             if update_id >= new_offset:
                 new_offset = update_id + 1
 
+            # --- Callback query isleme (inline buton tiklama) ---
+            callback_query = update.get("callback_query")
+            if callback_query:
+                self._handle_callback_query(callback_query, db_path)
+                continue
+
+            # --- Normal mesaj isleme ---
             message = update.get("message", {})
             chat_id = str(message.get("chat", {}).get("id", ""))
             text = (message.get("text") or "").strip()
@@ -216,6 +306,54 @@ class TelegramNotifier:
                 self._handle_evdeyim(chat_id, db_path)
 
         set_system_state(db_path, "telegram_last_offset", str(new_offset))
+
+    def _handle_callback_query(self, callback_query: dict, db_path: str) -> None:
+        """Inline buton callback'ini isle (eskalasyon onay).
+
+        Args:
+            callback_query: Telegram callback_query objesi
+            db_path: Veritabani yolu
+        """
+        from src.database import get_db
+
+        data = callback_query.get("data", "")
+        callback_query_id = callback_query.get("id", "")
+
+        # Yetkilendirme: sadece kayitli chat_id'lerden gelen callback'ler
+        chat_id = str(
+            callback_query.get("message", {}).get("chat", {}).get("id", "")
+        )
+        if chat_id not in self._chat_ids:
+            logger.warning("Yetkisiz callback_query: chat_id=%s (ignoring)", chat_id)
+            self._send_request("answerCallbackQuery", {
+                "callback_query_id": callback_query_id,
+                "text": "Yetkisiz erisim.",
+            })
+            return
+
+        if not data.startswith("ack_"):
+            return
+
+        try:
+            alert_id = int(data.split("_")[1])
+        except (IndexError, ValueError):
+            return
+
+        # pending_alerts tablosunda status'u acknowledged yap
+        with get_db(db_path) as conn:
+            conn.execute(
+                "UPDATE pending_alerts SET status = 'acknowledged' WHERE id = ?",
+                (alert_id,),
+            )
+            conn.commit()
+
+        logger.info("Alarm onaylandi: alert_id=%d (chat_id=%s)", alert_id, chat_id)
+
+        # answerCallbackQuery — ZORUNLU, yoksa buton loading kalir
+        self._send_request("answerCallbackQuery", {
+            "callback_query_id": callback_query_id,
+            "text": "Bildiriminiz alindi, eskalasyon iptal edildi.",
+        })
 
     def _handle_yardim(self, chat_id: str) -> None:
         """Yardim metni gonder."""

@@ -52,6 +52,8 @@ class AlertsConfig(BaseModel):
 class TelegramConfig(BaseModel):
     bot_token: str = ""
     chat_ids: list[str] = Field(default_factory=list)
+    emergency_chat_ids: list[str] = Field(default_factory=list)
+    escalation_minutes: int = 10
 
 
 class HeartbeatConfig(BaseModel):
@@ -124,9 +126,15 @@ def load_config(path: str | None = None) -> AppConfig:
     env_password = os.environ.get("ANNEM_DASHBOARD_PASSWORD")
     if env_password:
         config.dashboard.password = env_password
+    env_username = os.environ.get("ANNEM_DASHBOARD_USERNAME")
+    if env_username:
+        config.dashboard.username = env_username
     env_token = os.environ.get("ANNEM_TELEGRAM_BOT_TOKEN")
     if env_token:
         config.telegram.bot_token = env_token
+    env_db_path = os.environ.get("ANNEM_DB_PATH")
+    if env_db_path:
+        config.database.path = env_db_path
 
     logger.info("Config yuklendi: %s", path)
     return config

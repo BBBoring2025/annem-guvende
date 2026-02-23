@@ -12,6 +12,8 @@ alerts:        # Alarm esikleri
 telegram:      # Bildirim ayarlari
 heartbeat:     # Dis sunucu saglik kontrolu
 database:      # Veritabani ayarlari
+dashboard:     # Web dashboard kimlik dogrulama
+system:        # Sistem davranisi (tatil modu, trend analizi)
 ```
 
 ## mqtt
@@ -73,10 +75,13 @@ model:
 
 ```yaml
 alerts:
-  z_threshold_gentle: 2.0     # Dikkat seviyesi esigi
-  z_threshold_serious: 3.0    # Uyari seviyesi esigi
-  z_threshold_emergency: 4.0  # Acil seviyesi esigi
-  min_train_days: 7           # Bildirim icin minimum egitim gunu
+  z_threshold_gentle: 2.0         # Dikkat seviyesi esigi
+  z_threshold_serious: 3.0        # Uyari seviyesi esigi
+  z_threshold_emergency: 4.0      # Acil seviyesi esigi
+  min_train_days: 7               # Bildirim icin minimum egitim gunu
+  morning_check_hour: 11          # Sabah sessizlik kontrol saati
+  silence_threshold_hours: 3      # Uzun sessizlik esigi (saat)
+  fall_detection_minutes: 45      # Banyo dusme tespiti suresi (0 = kapali)
 ```
 
 ### Alarm Seviyeleri
@@ -92,10 +97,16 @@ alerts:
 
 ```yaml
 telegram:
-  bot_token: "123456:ABC-..."  # BotFather'dan alinan token
+  bot_token: "123456:ABC-..."    # BotFather'dan alinan token
   chat_ids:
-    - "123456789"              # Bildirim alacak kullanici(lar)
+    - "123456789"                # Ana kullanicilar
+  emergency_chat_ids:
+    - "987654321"                # Eskalasyon: komsu, diger aile
+  escalation_minutes: 10         # Yanit beklenecek sure (dk)
 ```
+
+- `emergency_chat_ids`: Level 3 (acil) alarmlarda ana kullanici yanit vermezse bilgilendirilecek kisiler
+- `escalation_minutes`: "Gordum" butonuna tiklanmazsa eskalasyona kadar bekleme suresi
 
 ### Bot Olusturma
 
@@ -120,12 +131,13 @@ telegram:
 
 ```yaml
 heartbeat:
-  url: "https://vps.example.com/heartbeat"  # Dis sunucu URL
-  device_id: "annem-pi"                      # Cihaz kimligi
-  interval_seconds: 300                       # Gonderm araligi (sn)
+  enabled: true                                # Heartbeat aktif mi
+  url: "https://vps.example.com/heartbeat"     # Dis sunucu URL
+  device_id: "annem-pi"                        # Cihaz kimligi
+  interval_seconds: 300                        # Gonderim araligi (sn)
 ```
 
-- Bos `url` = heartbeat devre disi
+- `enabled: false` veya bos `url` = heartbeat devre disi
 - Dis sunucu Pi'nin ayakta oldugunu dogrular
 
 ## database
@@ -133,7 +145,48 @@ heartbeat:
 ```yaml
 database:
   path: "./data/annem_guvende.db"  # SQLite veritabani yolu
+  retention_days: 90               # Eski event saklama suresi (gun)
 ```
 
 - Varsayilan yol genelde yeterlidir
 - Docker kullaniyorsaniz volume mount ile kalicilik saglayin
+- `retention_days`: Gece bakiminde bu sureden eski sensor olaylari silinir
+
+## dashboard
+
+```yaml
+dashboard:
+  username: "admin"                  # HTTP Basic Auth kullanici adi
+  password: "change_me_immediately"  # Guclu bir sifre belirleyin!
+```
+
+- Production modda (`ANNEM_ENV=production`) hem username hem password **zorunludur**
+- Varsayilan sifre production'da kabul edilmez
+- Bos birakilirsa auth devre disi kalir (sadece gelistirme icin)
+- Env override: `ANNEM_DASHBOARD_USERNAME`, `ANNEM_DASHBOARD_PASSWORD`
+
+## system
+
+```yaml
+system:
+  vacation_mode: false               # Tatil modu (true = alarmlar duraklatilir)
+  trend_analysis_days: 30            # Kirilganlik trend analiz periyodu (gun)
+  trend_min_days: 14                 # Minimum veri gunu (altinda trend hesaplanmaz)
+  trend_bathroom_threshold: 0.3      # Banyo artis trend esigi
+  trend_presence_threshold: -0.3     # Hareket azalis trend esigi
+```
+
+- `vacation_mode`: Baslangic degeri. Calisma zamaninda DB'de tutulur, Telegram `/tatil` ile degistirilebilir
+- `trend_*` parametreleri haftalik kirilganlik raporunu kontrol eder (Pazar 10:00)
+
+## Ortam Degiskenleri (Env Variables)
+
+Config dosyasi yerine env variable ile override edilebilen ayarlar:
+
+| Degisken | Aciklama | Override Ettigi |
+|----------|----------|-----------------|
+| `ANNEM_DASHBOARD_USERNAME` | Dashboard kullanici adi | `dashboard.username` |
+| `ANNEM_DASHBOARD_PASSWORD` | Dashboard sifresi | `dashboard.password` |
+| `ANNEM_TELEGRAM_BOT_TOKEN` | Telegram bot token | `telegram.bot_token` |
+| `ANNEM_CONFIG_PATH` | Config dosya yolu | Varsayilan `config.yml` |
+| `ANNEM_ENV` | Ortam (`production` = siki guvenlik) | — |

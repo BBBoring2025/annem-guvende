@@ -23,6 +23,9 @@ Eger `username` veya `password` bos birakilirsa kimlik dogrulama devre disi kali
 
 **Muaf endpoint:** `GET /health` — kimlik dogrulama gerektirmez.
 
+> **Production Notu:** `ANNEM_ENV=production` ortaminda `dashboard.username` ve
+> `dashboard.password` **zorunludur**. Bos veya varsayilan sifre ile uygulama baslamaz.
+
 ---
 
 ## Endpoint'ler
@@ -226,6 +229,33 @@ Ogrenme sureci metrikleri.
   "ci_widths": [0.45, 0.38, 0.32, "..."]
 }
 ```
+
+---
+
+### GET /api/trends
+
+Kanal bazli uzun vadeli trend egimleri (kirilganlik endeksi).
+
+**Yanit (200 OK):**
+
+```json
+{
+  "trends": {
+    "presence": -0.12,
+    "fridge": 0.05,
+    "bathroom": 0.35,
+    "door": -0.02
+  },
+  "period_days": 30
+}
+```
+
+| Alan | Tip | Aciklama |
+|------|-----|----------|
+| trends | object | Kanal bazli egim degerleri (pozitif = artis, negatif = azalis) |
+| period_days | integer | Analiz periyodu (gun) |
+
+**Not:** Yeterli veri yoksa (`trend_min_days`'den az) kanal degeri `null` doner.
 
 ---
 

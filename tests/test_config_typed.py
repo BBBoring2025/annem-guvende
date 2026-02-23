@@ -128,3 +128,32 @@ def test_production_default_password_raises(tmp_path, monkeypatch):
         with pytest.raises((ValueError, SystemExit)):
             with TestClient(app):
                 pass
+
+
+def test_env_override_dashboard_username(monkeypatch):
+    """ANNEM_DASHBOARD_USERNAME env → config.dashboard.username override."""
+    monkeypatch.setenv("ANNEM_DASHBOARD_USERNAME", "env_admin_42")
+    config = load_config()
+    assert config.dashboard.username == "env_admin_42"
+
+
+def test_production_blank_password_raises(tmp_path, monkeypatch):
+    """ANNEM_ENV=production + password='' → ValueError."""
+    from unittest.mock import MagicMock, patch
+
+    from fastapi.testclient import TestClient
+
+    monkeypatch.setenv("ANNEM_ENV", "production")
+    config_data = AppConfig(
+        dashboard={"username": "admin", "password": ""},
+        database={"path": str(tmp_path / "test.db")},
+    )
+    with patch("src.main.load_config", return_value=config_data), \
+         patch("src.main.MQTTCollector") as mock_mqtt:
+        mock_collector = MagicMock()
+        mock_mqtt.return_value = mock_collector
+        from src.main import app
+
+        with pytest.raises((ValueError, SystemExit)):
+            with TestClient(app):
+                pass

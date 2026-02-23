@@ -79,6 +79,23 @@ MIGRATIONS = [
         updated_at  TEXT DEFAULT (datetime('now'))
     );
     """),
+    (3, """
+    -- Sema versiyonu 3: Eskalasyon icin bekleyen alarmlar (Sprint 15)
+
+    CREATE TABLE IF NOT EXISTS pending_alerts (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        alert_level INTEGER NOT NULL,
+        message     TEXT NOT NULL,
+        timestamp   TEXT NOT NULL,
+        status      TEXT NOT NULL DEFAULT 'pending'
+    );
+    """),
+    (4, """
+    -- Sema versiyonu 4: pending_alerts performans indeksi (Sprint 16)
+
+    CREATE INDEX IF NOT EXISTS idx_pending_alerts_status_ts
+        ON pending_alerts(status, timestamp);
+    """),
 ]
 
 

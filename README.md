@@ -7,7 +7,7 @@
 ![SQLite](https://img.shields.io/badge/SQLite-WAL-003B57?logo=sqlite&logoColor=white)
 ![MQTT](https://img.shields.io/badge/MQTT-Zigbee2MQTT-660066)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
-![Tests](https://img.shields.io/badge/Tests-303%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-313%20passing-brightgreen)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ---
@@ -52,6 +52,7 @@ Zigbee Sensorler ──> Zigbee2MQTT ──> MQTT Broker (:1883)
 | :lock: | **Mahremiyet** | Kamera yok, mikrofon yok, tamamen lokal veri, Zigbee sensorler |
 | 🚿 | **Kamerasız Düşme Tespiti** | Banyo sensörü + zaman-farkı algoritması (Time-to-Return), 45dk |
 | 📉 | **Kırılganlık Endeksi** | 30 günlük lineer regresyon ile uzun vadeli sağlık trend analizi |
+| 🚨 | **Akıllı Eskalasyon** | Level 3 alarm → Telegram "Gördüm" butonu → 10dk yanıt yoksa komşuya SOS |
 
 ---
 
@@ -104,6 +105,36 @@ Dashboard: `http://RASPBERRY_PI_IP:8099`
 
 ---
 
+## Production Kurulum
+
+Production ortaminda ek guvenlik adimlarini uygulayin:
+
+```bash
+# Volume izinleri
+mkdir -p config data
+cp config.yml.example config/config.yml
+chown -R 10001:10001 data/
+
+# Env secrets ayarla (config.yml yerine)
+export ANNEM_ENV=production
+export ANNEM_DASHBOARD_USERNAME=admin
+export ANNEM_DASHBOARD_PASSWORD=guclu_sifre_buraya
+export ANNEM_TELEGRAM_BOT_TOKEN=bot_token_buraya
+
+# Production compose overlay ile baslat
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+Production modda:
+- Dashboard username ve password **zorunludur** (bos birakilamaz)
+- Varsayilan sifre (`change_me_immediately`) **kabul edilmez**
+- Tum hassas degerler env variable ile override edilebilir
+- Port 8099'u internete acmayin; VPN/Tailscale veya reverse proxy kullanin
+
+Detaylar icin bkz. [INSTALL.md](docs/INSTALL.md)
+
+---
+
 ## Proje Yapisi
 
 ```
@@ -112,7 +143,7 @@ annem-guvende/
 │   ├── main.py                # FastAPI uygulama + zamanlayici + lifespan
 │   ├── config.py              # Pydantic typed config (9 bolum)
 │   ├── database.py            # SQLite + migrasyon
-│   ├── jobs.py                # 11 zamanlayici gorevi
+│   ├── jobs.py                # 13 zamanlayici gorevi
 │   ├── collector/             # MQTT + EventProcessor + SlotAggregator
 │   ├── learner/               # BetaPosterior + RoutineLearner + Metrics
 │   ├── detector/              # AnomalyScorer + ThresholdEngine + Realtime
@@ -120,7 +151,7 @@ annem-guvende/
 │   ├── heartbeat/             # HeartbeatClient + Watchdog + SystemMonitor
 │   ├── dashboard/             # REST API + Charts + static/
 │   └── simulator/             # Demo modu (21 gun simulasyon)
-├── tests/                     # 303 test
+├── tests/                     # 313 test
 ├── docs/                      # ARCHITECTURE, API, CONFIG, INSTALL, vb.
 ├── scripts/                   # init_db.py, pilot_checklist.py
 ├── .github/workflows/         # CI (ruff + pytest)
@@ -152,7 +183,7 @@ Bot'a asagidaki komutlari gonderebilirsiniz:
 
 ```bash
 # Testleri calistir
-pytest -v --tb=short              # 303 test
+pytest -v --tb=short              # 313 test
 
 # Lint kontrolu
 ruff check src/ tests/ scripts/   # 0 hata

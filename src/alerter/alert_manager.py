@@ -56,6 +56,20 @@ class AlertManager:
         self._cooldown_hours = 6
         self._morning_max_per_day = 2
 
+    def send_notification(self, message: str) -> dict[str, bool]:
+        """Tum kayitli kullanicilara bildirim gonder.
+
+        jobs.py gibi harici moduller icin public API.
+        _notifier'a dogrudan erisim yerine bu metod kullanilmalidir.
+
+        Args:
+            message: Gonderilecek mesaj metni (HTML parse_mode)
+
+        Returns:
+            {chat_id: basarili_mi} dict'i
+        """
+        return self._notifier.send_to_all(message)
+
     # ------------------------------------------------------------------ #
     #  Rate Limiting
     # ------------------------------------------------------------------ #
@@ -255,6 +269,48 @@ class AlertManager:
         return "\n".join(explanations)
 
     # ------------------------------------------------------------------ #
+    #  Eskalasyon Yardimcilari
+    # ------------------------------------------------------------------ #
+
+    def _create_pending_alert(self, db_path: str, alert_level: int, message: str) -> int:
+        """pending_alerts tablosuna yeni kayit ekle.
+
+        Args:
+            db_path: Veritabani yolu
+            alert_level: Alarm seviyesi
+            message: Alarm mesaji
+
+        Returns:
+            Eklenen kaydin id'si
+        """
+        now_str = datetime.now().isoformat()
+        with get_db(db_path) as conn:
+            cursor = conn.execute(
+                "INSERT INTO pending_alerts (alert_level, message, timestamp, status) "
+                "VALUES (?, ?, ?, 'pending')",
+                (alert_level, message, now_str),
+            )
+            conn.commit()
+            return cursor.lastrowid
+
+    def _send_with_escalation(self, db_path: str, alert_level: int, text: str) -> None:
+        """Level 3 ise butonlu mesaj + pending_alert, aksi halde normal gonder.
+
+        Args:
+            db_path: Veritabani yolu
+            alert_level: Alarm seviyesi
+            text: Mesaj metni
+        """
+        if alert_level >= 3 and db_path:
+            alert_id = self._create_pending_alert(db_path, alert_level, text)
+            self._notifier.send_to_all_with_ack(text, alert_id)
+            logger.info(
+                "Level 3 alarm butonlu gonderildi: alert_id=%d", alert_id
+            )
+        else:
+            self._notifier.send_to_all(text)
+
+    # ------------------------------------------------------------------ #
     #  Ana Isleyiciler
     # ------------------------------------------------------------------ #
 
@@ -289,7 +345,7 @@ class AlertManager:
                 explanation=explanation,
             )
             if text:
-                self._notifier.send_to_all(text)
+                self._send_with_escalation(db_path, alert_level, text)
                 logger.info(
                     "Alarm gonderildi: date=%s level=%d", date, alert_level
                 )
@@ -320,16 +376,16 @@ class AlertManager:
                     f"{alert.message}\n\n"
                     f"📞 Lütfen kontrol edin."
                 )
-                self._notifier.send_to_all(text)
+                self._send_with_escalation(db_path, alert.alert_level, text)
                 logger.info("Uzun sessizlik alarmi gonderildi")
         elif alert.alert_type == "fall_suspicion":
-            # Dusme suphesi — ACIL, rate limit atla
+            # Dusme suphesi — ACIL (Level 3), eskalasyon destekli
             text = (
                 f"🚨 <b>DÜŞME ŞÜPHESİ</b>\n\n"
                 f"{alert.message}\n\n"
                 f"📞 Derhal kontrol edin!"
             )
-            self._notifier.send_to_all(text)
+            self._send_with_escalation(db_path, alert.alert_level, text)
             logger.critical("DUSME SUPHESI alarmi gonderildi!")
 
     def handle_daily_summary(self, db_path: str) -> None:

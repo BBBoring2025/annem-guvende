@@ -34,6 +34,7 @@ from src.jobs import (
     daily_learning_job,
     daily_scoring_job,
     daily_summary_job,
+    escalation_check_job,
     fill_yesterday_slots_job,
     heartbeat_job,
     mqtt_retry_job,
@@ -127,23 +128,30 @@ async def lifespan(app: FastAPI):
     app.state.db_path = db_path
     logger.info("Veritabani hazir: %s", db_path)
 
-    # Dashboard guvenlik kontrolu
-    if config.dashboard.password == "change_me_immediately":
-        if os.environ.get("ANNEM_ENV") == "production":
+    # Dashboard guvenlik kontrolu (fail-closed)
+    is_production = os.environ.get("ANNEM_ENV") == "production"
+
+    if is_production:
+        if not config.dashboard.username:
+            raise ValueError(
+                "GUVENLIK: Production modda dashboard.username bos olamaz! "
+                "ANNEM_DASHBOARD_USERNAME env variable veya config.yml guncelleyin."
+            )
+        if not config.dashboard.password:
+            raise ValueError(
+                "GUVENLIK: Production modda dashboard.password bos olamaz! "
+                "ANNEM_DASHBOARD_PASSWORD env variable veya config.yml guncelleyin."
+            )
+        if config.dashboard.password == "change_me_immediately":
             raise ValueError(
                 "GUVENLIK: Production modda varsayilan sifre kullanilamaz! "
                 "ANNEM_DASHBOARD_PASSWORD env variable veya config.yml guncelleyin."
             )
+    elif config.dashboard.password == "change_me_immediately":
         logger.critical(
             "GUVENLIK UYARISI: Dashboard sifresi varsayilan degerde! "
             "config.yml veya ANNEM_DASHBOARD_PASSWORD env variable ile degistirin."
         )
-
-    if os.environ.get("ANNEM_ENV") == "production":
-        if not (config.dashboard.username and config.dashboard.password != "change_me_immediately"):
-            raise ValueError(
-                "GUVENLIK: Production modda dashboard username ve password ayarlanmali!"
-            )
 
     # Tatil modu: DB'de state yoksa config degerini seed et
     if not get_system_state(db_path, "vacation_mode"):
@@ -273,6 +281,16 @@ async def lifespan(app: FastAPI):
             misfire_grace_time=15, replace_existing=True,
         )
         logger.info("Telegram komut isleme aktif (30sn polling)")
+
+    # Eskalasyon kontrolu (her 2dk)
+    if notifier.enabled and config.telegram.emergency_chat_ids:
+        scheduler.add_job(
+            lambda: escalation_check_job(db_path, config, notifier),
+            "interval", minutes=2,
+            id="escalation_check", name="Eskalasyon kontrolu",
+            replace_existing=True,
+        )
+        logger.info("Eskalasyon kontrolu aktif (2dk araliklarla)")
 
     yield
 

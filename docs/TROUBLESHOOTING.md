@@ -393,6 +393,58 @@ Evden uzun sureli ayrildiginizda tatil modunu acin. Bu modda:
 
 ---
 
+## Production Sorunlari
+
+### "GUVENLIK: Production modda dashboard.password bos olamaz!"
+
+`ANNEM_ENV=production` ayarli iken dashboard kullanici adi veya sifresi
+tanimlanmamis. Cozum:
+
+```bash
+# .env dosyasini kontrol edin
+cat .env
+
+# Eksik degiskeni ekleyin
+echo 'ANNEM_DASHBOARD_PASSWORD=guclu_sifre' >> .env
+docker compose restart annem-guvende
+```
+
+### "GUVENLIK: Production modda varsayilan sifre kullanilamaz!"
+
+Sifre hala `change_me_immediately` varsayilan degerinde. Gercek bir sifre
+belirleyin:
+
+```bash
+# .env dosyasinda ANNEM_DASHBOARD_PASSWORD satirini guncelleyin
+nano .env
+docker compose restart annem-guvende
+```
+
+### "GUVENLIK: Production modda dashboard.username bos olamaz!"
+
+Dashboard kullanici adi ayarlanmamis:
+
+```bash
+echo 'ANNEM_DASHBOARD_USERNAME=admin' >> .env
+docker compose restart annem-guvende
+```
+
+### "Gordum" butonu calismıyor
+
+Acil alarm (Level 3) mesajindaki "Gordum, Ilgileniyorum" butonuna
+bastiginizda yanit gelmiyorsa:
+
+1. Bot'un callback_query izni var mi kontrol edin — `getUpdates`
+   yanıtında `allowed_updates` listesinde `callback_query` olmalidir.
+2. `chat_id`'nizin `config.yml` → `telegram.chat_ids` listesinde oldugundan
+   emin olun. Kayitsiz chat_id'lerden gelen callback'ler reddedilir.
+3. Loglarda `"Yetkisiz callback_query"` uyarisi arayin:
+   ```bash
+   docker compose logs annem-guvende | grep -i "callback"
+   ```
+
+---
+
 ## Destek
 
 Sorun devam ederse:

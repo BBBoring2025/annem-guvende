@@ -34,6 +34,10 @@ Duzenlenmesi gereken alanlar:
 ### 3. Baslat
 
 ```bash
+mkdir -p config data
+cp config.yml.example config/config.yml
+# config/config.yml icindeki sensor, Telegram ve diger ayarlari duzenleyin
+
 docker compose up -d
 ```
 
@@ -59,6 +63,33 @@ Bu ek dosya sunlari saglar:
 
 > **Not:** Volume izinleri hatali ise uygulama baslangicta
 > `"Veri dizini yazilabilir degil"` hatasi verir ve cikar.
+
+### 3c. Production Ortam Degiskenleri
+
+Production modda hassas bilgileri config dosyasina yazmak yerine ortam
+degiskenleri ile verin. Proje dizininde bir `.env` dosyasi olusturun:
+
+```bash
+cp .env.example .env
+# .env dosyasını düzenleyin: sifre, token vb. gercek degerlerle degistirin
+nano .env
+
+chmod 600 .env
+```
+
+Docker Compose bu dosyayi otomatik okur. Desteklenen degiskenler:
+
+| Degisken | Aciklama |
+|----------|----------|
+| `ANNEM_ENV` | `production` ise guvenlik kontrolleri aktif |
+| `ANNEM_DASHBOARD_USERNAME` | Dashboard kullanici adi |
+| `ANNEM_DASHBOARD_PASSWORD` | Dashboard sifresi |
+| `ANNEM_TELEGRAM_BOT_TOKEN` | Telegram bot token |
+| `ANNEM_DB_PATH` | Veritabani dosya yolu |
+
+> **Onemli:** `ANNEM_ENV=production` oldugunda bos kullanici adi, bos sifre
+> veya varsayilan sifre (`change_me_immediately`) ile uygulama **baslamaz**.
+> Bu fail-closed tasarimdir.
 
 ### 4. Dogrula
 

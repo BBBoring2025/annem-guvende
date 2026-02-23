@@ -19,7 +19,7 @@ Uygulama `src/main.py` icerisindeki async lifespan fonksiyonu ile baslatilir. Li
 1. Config yukler (`config.yml` veya `config.yml.example` fallback)
 2. SQLite veritabanini baslatir (migrasyon)
 3. MQTT baglantisini kurar
-4. APScheduler'i 11 gorevle baslatir
+4. APScheduler'i 13 gorevle baslatir
 5. Telegram notifier olusturur
 6. Static dosyalari mount eder
 
@@ -86,7 +86,7 @@ Uygulama `src/main.py` icerisindeki async lifespan fonksiyonu ile baslatilir. Li
 
 ## Veritabani Semasi
 
-SQLite WAL modunda calisir. 6 tablo:
+SQLite WAL modunda calisir. 7 tablo:
 
 ### sensor_events
 
@@ -166,6 +166,26 @@ Key-value sistem durumu.
 | value | TEXT NOT NULL | Deger |
 | updated_at | TEXT | Son guncelleme |
 
+### pending_alerts
+
+Eskalasyon icin bekleyen alarmlar (Sprint 15).
+
+| Kolon | Tip | Aciklama |
+|-------|-----|----------|
+| id | INTEGER PK | Otomatik artan |
+| alert_level | INTEGER NOT NULL | Alarm seviyesi (genelde 3) |
+| message | TEXT NOT NULL | Alarm mesaj metni |
+| timestamp | TEXT NOT NULL | Olusturulma zamani (ISO) |
+| status | TEXT DEFAULT 'pending' | pending / acknowledged / escalated |
+
+**Indeks:** `idx_pending_alerts_status_ts(status, timestamp)`
+
+**Yasam dongusu:**
+1. Level 3 alarm tetiklenir → `pending` kayit eklenir
+2. Kullanici "Gordum" butonuna tiklar → `acknowledged`
+3. `escalation_minutes` icinde yanit yoksa → `escalated` + emergency mesaj
+4. 30 gunden eski kayitlar gece bakiminda temizlenir
+
 ### schema_version
 
 Veritabani migrasyon takibi.
@@ -233,7 +253,7 @@ composite_z = max(nll_z, count_risk)
 
 ## Zamanlayici Gorevleri
 
-APScheduler ile yonetilen 11 gorev:
+APScheduler ile yonetilen 13 gorev:
 
 | Gorev | Tip | Zamanlama | Aciklama |
 |-------|-----|-----------|----------|
@@ -241,17 +261,19 @@ APScheduler ile yonetilen 11 gorev:
 | `fill_missing_slots` | cron | `hour=0, minute=5` | Onceki gun eksik slotlari doldur |
 | `daily_learning` | cron | `hour=0, minute=15` | Gunluk model ogrenme |
 | `daily_scoring` | cron | `hour=0, minute=20` | Gunluk anomali skorlama |
-| `realtime_checks` | cron | `minute="0,30"` | Sabah sessizlik + uzun sessizlik |
+| `realtime_checks` | cron | `minute="0,30"` | Sabah sessizlik + uzun sessizlik + dusme tespiti |
 | `daily_summary` | cron | `hour=22, minute=0` | Gunluk Telegram ozet |
+| `weekly_trend` | cron | `day_of_week="sun", hour=10` | Haftalik kirilganlik trend raporu |
 | `heartbeat` | interval | `seconds=config` | VPS heartbeat ping |
 | `system_watchdog` | cron | `minute="0,15,30,45"` | CPU/RAM/disk saglik kontrolu |
 | `mqtt_retry` | interval | `seconds=30` | MQTT yeniden baglanti |
 | `nightly_maintenance` | cron | `hour=3, minute=0` | DB temizlik + WAL checkpoint |
 | `telegram_commands` | interval | `seconds=30` | Telegram komut polling |
+| `escalation_check` | interval | `minutes=2` | Yanitsiz acil alarm eskalasyonu |
 
 **Tatil modunda atlanan gorevler:** `daily_learning`, `daily_scoring`, `realtime_checks`, `daily_summary`
 
-**Kosullu gorevler:** `heartbeat` (config.heartbeat.enabled), `telegram_commands` (notifier.enabled)
+**Kosullu gorevler:** `heartbeat` (config.heartbeat.enabled), `telegram_commands` (notifier.enabled), `escalation_check` (notifier.enabled + emergency_chat_ids)
 
 ---
 
@@ -265,3 +287,22 @@ APScheduler ile yonetilen 11 gorev:
 | **Mahremiyet** | Sensor tipi | Kamera yok, mikrofon yok, sadece hareket ve kapi sensorleri |
 | **Config** | .gitignore | `config.yml` (token, sifre iceren) repo disinda tutulur |
 | **CI/CD** | GitHub Actions | Her push'ta `ruff check` + `pytest` otomatik calisir |
+| **Production** | Fail-closed guard | `ANNEM_ENV=production`'da bos/varsayilan sifre → ValueError |
+
+---
+
+## Eskalasyon Akisi
+
+Level 3 (acil) alarm tetiklendiginde:
+
+```
+Level 3 Alarm ──> pending_alerts INSERT (status='pending')
+               ──> Telegram "Gordum" butonlu mesaj
+
+Her 2dk: escalation_check_job
+├── pending + suresi dolmus → emergency_chat_ids'e eskalasyon
+│                           → status='escalated'
+└── acknowledged → atla (eskalasyon iptal)
+```
+
+Zamanlama: `escalation_minutes` config parametresi (varsayilan 10dk).

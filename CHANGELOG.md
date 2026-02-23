@@ -4,6 +4,31 @@ Tum onemli degisiklikler sprint bazinda belgelenmistir.
 
 ---
 
+## Sprint 16 — Security Hotfix + Documentation Drift Fix
+- **Production Auth Fail-Closed:** Boş kullanıcı adı, boş şifre veya varsayılan şifre ile production başlatma engellendi (3 ayrı ValueError). Eski mantıktaki fail-open bug düzeltildi.
+- **Env Username Override:** `ANNEM_DASHBOARD_USERNAME` ortam değişkeni desteği eklendi.
+- **Telegram Callback Authorization:** `_handle_callback_query()` artık chat_id whitelist kontrolü yapıyor. Kayıtsız kullanıcılardan gelen buton tıklamaları reddedilir.
+- **pending_alerts DB Index:** `(status, timestamp)` composite index ile eskalasyon sorgusu hızlandırıldı (Migration v4).
+- **Nightly Cleanup:** 30 günden eski pending_alerts kayıtları gece bakımında temizlenir.
+- **Private Access Temizliği:** `alert_mgr._notifier.send_to_all()` → `alert_mgr.send_notification()` public API.
+- **Docs Drift Fix:** README, CONFIG, ARCHITECTURE, API, INSTALL, TROUBLESHOOTING belgeleri Sprint 13-16 değişiklikleriyle güncellendi.
+- **Prod Compose Fix (16.1):** Hardcoded şifreler `${VAR}` interpolasyona çevrildi, `.env.example` eklendi, `ANNEM_DB_PATH` env desteği eklendi.
+
+**Test sayısı:** 310 → 313 (+3)
+
+---
+
+## Sprint 15 — Akıllı Eskalasyon (Ölü Adamın Anahtarı)
+- **pending_alerts Tablosu:** Level 3 alarmlar DB'ye kaydedilir, yaşam döngüsü: pending → acknowledged / escalated (Migration v3).
+- **Inline Keyboard:** Acil alarm mesajlarında "✅ Gördüm, İlgileniyorum" butonu. `answerCallbackQuery` ile anında geri bildirim.
+- **Eskalasyon Job:** 2 dakikada bir yanıtsız alarmları kontrol eder. Süresi dolmuş alarmlar `emergency_chat_ids` listesine iletilir.
+- **Config:** `telegram.emergency_chat_ids` ve `telegram.escalation_minutes` ayarları.
+- **Telegram Komut Dinleme:** `allowed_updates` listesine `callback_query` eklendi.
+
+**Test sayısı:** 303 → 310 (+7)
+
+---
+
 ## Sprint 14 — Kırılganlık Endeksi (Frailty Index)
 - **Trend Analyzer:** Saf Python OLS lineer regresyon ile kanal bazlı uzun vadeli trend tespiti.
 - **Sıfır-Gün Doldurma:** SQL GROUP BY'ın atladığı boş günler 0 ile padding — eğim doğruluğu garanti.

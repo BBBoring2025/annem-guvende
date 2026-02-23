@@ -46,8 +46,11 @@ alerts:
 # === Telegram Bildirimleri ===
 telegram:
   bot_token: "BOT_TOKEN_BURAYA"          # BotFather'dan alinan token
-  chat_ids:                              # Bildirim alacak kullanicilar
+  chat_ids:                              # Ana kullanicilar
     - "CHAT_ID_BURAYA"
+  emergency_chat_ids:                    # Eskalasyon: komsu, diger aile
+    - "EMERGENCY_CHAT_ID_BURAYA"
+  escalation_minutes: 10                 # dk sonra eskalasyon
 
 # === Heartbeat (Dis Izleme) ===
 heartbeat:
